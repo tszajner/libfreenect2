@@ -51,6 +51,8 @@ typedef enum { IR, Depth, DepthEdge, IREdge } State;
 int const max_lowThreshold = 100;
 int const ratio = 3;
 //
+int const LCD_Width = 800;
+int const LCD_Height = 480; // BTW for cv:Mat mat , mat.rows and mat.cols returns height and width
 
 void sigint_handler(int s)
 {
@@ -94,9 +96,9 @@ int main(int argc, char *argv[])
 
   std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
   std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
-  cv::namedWindow("Kinect"); 
-  cv::createTrackbar("EdgeThresholds", "Kinect", &threshold, max_lowThreshold);
-
+ // cv::namedWindow("Kinect"); 
+  cv::namedWindow("KinectEqualized", CV_WINDOW_NORMAL);
+  cv::createTrackbar("EdgeThresholds", "KinectEqualized", &threshold, max_lowThreshold);
   while(!protonect_shutdown)
   {
     listener.waitForNewFrame(frames);
@@ -105,19 +107,23 @@ int main(int argc, char *argv[])
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
     
     cv::Mat IRImage = (cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 10000.0f); //originally 200000.0f
-    cv::Mat ucharIRImage, ucharIRImageScaled, ucharIRImageScaledEqualized;
-    IRImage.convertTo(ucharIRImageScaled,CV_8UC1, 255, 0);
-    cv::equalizeHist(ucharIRImageScaled, ucharIRImageScaledEqualized);
-    cv::blur(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, cv::Size(3, 3) ); //What is 3x3?
-    cv::dilate(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, cv::Mat() ); //What is 3x3   
-    cv::erode(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, cv::Mat() ); //What is 3x3   
+    cv::flip (IRImage, IRImage, -1); // -1 means flip around BOTH x- and y-axis  
+    cv::Mat IRImageScaled, IRImageScaledEqualized;
+    IRImage.convertTo(IRImageScaled,CV_8UC1, 255, 0);
+    cv::equalizeHist(IRImageScaled, IRImageScaledEqualized);
+    cv::blur(IRImageScaledEqualized, IRImageScaledEqualized, cv::Size(3, 3) ); //What is 3x3?
+    cv::dilate(IRImageScaledEqualized, IRImageScaledEqualized, cv::Mat() ); //What is 3x3   
+    cv::erode(IRImageScaledEqualized, IRImageScaledEqualized, cv::Mat() ); //What is 3x3   
 
-    pos = cv::getTrackbarPos("EdgeThresholds", "Kinect");
-    cv::Canny(ucharIRImageScaled, ucharIRImageScaled, pos, pos*ratio);
-    cv::Canny(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, pos, pos*ratio);
+    pos = cv::getTrackbarPos("EdgeThresholds", "KinectEqualized");
+    cv::Canny(IRImageScaled, IRImageScaled, pos, pos*ratio);
+    cv::Canny(IRImageScaledEqualized, IRImageScaledEqualized, pos, pos*ratio);
     //cv::cuda::fastNlMeansDenoising(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized); 
-    cv::imshow("Kinect", ucharIRImageScaled);
-    cv::imshow("KinectEqualized", ucharIRImageScaledEqualized);
+  //  cv::imshow("Kinect", IRImageScaled);
+
+   // cv::Mat ResizedImage = cv::Mat(LCD_Height, LCD_Width, CV_32FC1);
+   // cv::resize(IRImageScaledEqualized, ResizedImage, ResizedImage.size() );
+    cv::imshow("KinectEqualized",IRImageScaledEqualized );
 //    cv::imshow("IR",cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f); 
     int key = cv::waitKey(1);
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
