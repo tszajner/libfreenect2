@@ -38,6 +38,7 @@
 #include <libfreenect2/frame_listener_impl.h>
 #include <libfreenect2/threading.h>
 #include <libfreenect2/jetsonGPIO.h>
+#include <libfreenect2/Adafruit_ADS1015.h>
 
 #include <string>
 #include <unistd.h>
@@ -45,17 +46,28 @@
 bool protonect_shutdown = false;
 
 typedef enum { IR, Depth, DepthEdge, IREdge } State;
-
+std::string text = "Infrared";
+int fontFace = CV_FONT_HERSHEY_SIMPLEX;
 //Some Canny Threshold
 int const ratio = 3;
 int const cannythresh = 50;
 //
 
 //Zoom scale
-float scale = 100;
+float scale = 1;
+int x = 148;
+int y = 28; 
 int const STREAM_HEIGHT = 424;
 int const STREAM_WIDTH = 512;
-
+int const LCD_HEIGHT = 480;
+int const LCD_WIDTH = 800;
+int minZoomADC = 1056;
+int maxZoomADC = 1649;
+int ZoomADCRange = maxZoomADC - minZoomADC;
+float minZoomBound = 1 / maxZoomADC - minZoomADC;
+int top_border = LCD_HEIGHT - STREAM_HEIGHT / 2;
+int side_border = LCD_WIDTH - STREAM_WIDTH / 2;
+//int borderType = BORDER_CONSTANT;
 void sigint_handler(int s)
 {
   protonect_shutdown = true;
@@ -82,7 +94,9 @@ int main(int argc, char *argv[])
     binpath = program_path.substr(0, executable_name_idx);
   }
 
-
+  Adafruit_ADS1015 ads(0x48);
+  ads.setGain(GAIN_ONE);
+  ads.setSps(SPS_250);
   libfreenect2::Freenect2 freenect2;
   libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
 
@@ -104,16 +118,20 @@ int main(int argc, char *argv[])
 
   std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
   std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
+  cv::Mat trans(2, 3, CV_32FC1);
   cv::namedWindow("Kinect", CV_WINDOW_NORMAL);
-  
+//  cv::setWindowProperty("Kinect", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+  cv::Mat Display = cv::Mat(LCD_HEIGHT, LCD_WIDTH, CV_32FC1);
   //int pos, threshold = 0;
   //cv::createTrackbar("EdgeThresholds", "Kinect", &threshold, max_lowThreshold);
   while(!protonect_shutdown)
   {
+   
     listener.waitForNewFrame(frames);
     libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
     libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
+    Display =  cv::Mat::zeros(LCD_HEIGHT, LCD_WIDTH, CV_32FC1);
 /*
 #ifndef LIBFREENECT2_WITH_TEGRA_JPEG_SUPPORT
     cv::imshow("rgb", cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data));
@@ -126,8 +144,16 @@ int main(int argc, char *argv[])
 #endif
 */
 
-    float height = float(STREAM_HEIGHT) * (scale / 100.0f); 
-    float width = float(STREAM_WIDTH) * (scale / 100.0f);
+    int16_t walue = ads.readADC_SingleEnded(3);
+    scale = (float(walue) - float(minZoomADC)) / float(ZoomADCRange);
+    std::cout << scale << std::endl; 
+    if (scale <= 0)
+    {
+        scale = 1 / (float(maxZoomADC) - float(minZoomADC));
+    }
+    std::cout << scale << std::endl; 
+    float height = float(STREAM_HEIGHT) * (scale); 
+    float width = float(STREAM_WIDTH) * (scale);
     int a,b,c,d;
     a = (STREAM_WIDTH - int(width)) / 2;
     b = STREAM_WIDTH - 1 - (STREAM_WIDTH - int(width)) / 2;
@@ -140,8 +166,13 @@ int main(int argc, char *argv[])
 
               cv::Mat IR =  cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 4500.0f;
               IR  = IR(cv::Range(c, d), cv::Range(a,b));
-              cv::resize(IR, IR, IR.size()); 
-              cv::imshow("Kinect", IR);
+              cv::resize(IR, IR, cv::Size(STREAM_WIDTH, STREAM_HEIGHT));
+//	      cv::copyMakeBorder(IR, Display, top_border, top_border, side_border, side_border, IPL_BORDER_CONSTANT); 
+	     // Display(cv::Rect(0, 0, LCD_WIDTH - STREAM_WIDTH, LCD_HEIGHT - STREAM_HEIGHT).copyTo(IR));  
+              IR.copyTo(Display(cv::Rect(x, y, IR.cols, IR.rows)));
+              cv::Point textOrg(x, y);
+              cv::putText(Display, text, textOrg, fontFace, 2, (255,255,255), 3);  
+              cv::imshow("Kinect", Display);
 	}       
 	break;
         case Depth:
@@ -193,6 +224,7 @@ int main(int argc, char *argv[])
         break;
     }
 
+
     int key = cv::waitKey(1);
     //gpioGetValue(input, &trigger);
   // if ((trigger^value) && (trigger))
@@ -231,6 +263,23 @@ int main(int argc, char *argv[])
    if ((key & 0xFF) == 114) //R?
    {
         	scale = 100;
+   }
+   // X and Y keys
+
+   if ((key & 0xFF) == 117) // U?
+   {
+   	if (x > 1)
+	{
+		x--;
+	}
+   }
+
+   if ((key & 0xFF) == 106) // J?
+   {
+   	if (x < (LCD_WIDTH - STREAM_WIDTH))
+	{
+		x++;
+	}
    }
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
    // value = trigger;

@@ -90,7 +90,8 @@ SET(SOURCES
   src/resource.cpp
 
   src/jetsonGPIO.c
-  
+  src/Adafruit_ADS1015.cpp
+ 
   src/usb_control.cpp
   src/command_transaction.cpp
   src/libfreenect2.cpp
