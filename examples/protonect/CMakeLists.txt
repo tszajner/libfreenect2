@@ -91,6 +91,7 @@ SET(SOURCES
 
   src/jetsonGPIO.c
   src/Adafruit_ADS1015.cpp
+  src/TrueSight.cpp
  
   src/usb_control.cpp
   src/command_transaction.cpp

@@ -39,6 +39,7 @@
 #include <libfreenect2/threading.h>
 #include <libfreenect2/jetsonGPIO.h>
 #include <libfreenect2/Adafruit_ADS1015.h>
+//#include <libfreenect2/TrueSight.h>
 
 #include <string>
 #include <unistd.h>
@@ -82,6 +83,7 @@ int main(int argc, char *argv[])
 
   std::string binpath = "/";
   State stream = IR; 
+
   /*jetsonGPIO input = gpio166 ;
   gpioExport(input);
   gpioOpen(input);
@@ -93,10 +95,14 @@ int main(int argc, char *argv[])
   {
     binpath = program_path.substr(0, executable_name_idx);
   }
-
+  //ADC
   Adafruit_ADS1015 ads(0x48);
   ads.setGain(GAIN_ONE);
   ads.setSps(SPS_250);
+
+  //TrueSight
+// TrueSight TrueSight(ads.readADC_SingleEnded(1), ads.readADC_SingleEnded(2), ads.readADC_SingleEnded(3));
+
   libfreenect2::Freenect2 freenect2;
   libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
 
@@ -131,6 +137,7 @@ int main(int argc, char *argv[])
     libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
     libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
+
     Display =  cv::Mat::zeros(LCD_HEIGHT, LCD_WIDTH, CV_32FC1);
 /*
 #ifndef LIBFREENECT2_WITH_TEGRA_JPEG_SUPPORT
@@ -159,6 +166,7 @@ int main(int argc, char *argv[])
     b = STREAM_WIDTH - 1 - (STREAM_WIDTH - int(width)) / 2;
     c = (STREAM_HEIGHT - int(height)) / 2;
     d = STREAM_HEIGHT - 1 - (STREAM_HEIGHT - int(height)) / 2;
+
     switch (stream)
     {
         case IR:
