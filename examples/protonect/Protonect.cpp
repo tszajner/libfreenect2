@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
   std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
   cv::Mat trans(2, 3, CV_32FC1);
   cv::namedWindow("Kinect", CV_WINDOW_NORMAL);
-//  cv::setWindowProperty("Kinect", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+  cv::setWindowProperty("Kinect", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
   cv::Mat Display = cv::Mat(LCD_HEIGHT, LCD_WIDTH, CV_32FC1);
   //int pos, threshold = 0;
   //cv::createTrackbar("EdgeThresholds", "Kinect", &threshold, max_lowThreshold);
