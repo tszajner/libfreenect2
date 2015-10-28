@@ -151,13 +151,12 @@ int main(int argc, char *argv[])
 
     int key = cv::waitKey(1);
     gpioGetValue(input, &trigger);
-    if (trigger^value)
+    if ((trigger^value) && (trigger))
     {
         //gpioSetValue(redLED, on);
         //usleep(1000000);         // on for 200ms
         //gpioSetValue(redLED, off);
         //usleep(200000);         // off for 200ms
-        value = trigger;
         switch(stream)
         {
             case IR: stream = Depth; break;
@@ -168,7 +167,7 @@ int main(int argc, char *argv[])
         }
     } 
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
-
+    value = trigger;
     listener.release(frames);
     //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(100));
   }
