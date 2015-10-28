@@ -34,6 +34,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+
 #include <libfreenect2/libfreenect2.hpp>
 #include <libfreenect2/frame_listener_impl.h>
 #include <libfreenect2/threading.h>
@@ -48,7 +49,7 @@ typedef enum { IR, Depth, DepthEdge, IREdge } State;
 
 //Some Canny Threshold
 int const max_lowThreshold = 100;
-int ratio = 3;
+int const ratio = 3;
 //
 
 void sigint_handler(int s)
@@ -65,13 +66,7 @@ int main(int argc, char *argv[])
 
   std::string binpath = "/";
   State stream = IR; 
-  jetsonGPIO input = gpio166 ;
-  gpioExport(input);
-  gpioOpen(input);
-  gpioSetDirection(input, inputPin);
-  //gpioSetEdge(input, "rising");
-  unsigned int value = 0;
-  unsigned int trigger = 0;
+  int threshold, pos; 
   if(executable_name_idx != std::string::npos)
   {
     binpath = program_path.substr(0, executable_name_idx);
@@ -99,6 +94,8 @@ int main(int argc, char *argv[])
 
   std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
   std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
+  cv::namedWindow("Kinect"); 
+  cv::createTrackbar("EdgeThresholds", "Kinect", &threshold, max_lowThreshold);
 
   while(!protonect_shutdown)
   {
@@ -106,68 +103,21 @@ int main(int argc, char *argv[])
     libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
     libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
-/*
-#ifndef LIBFREENECT2_WITH_TEGRA_JPEG_SUPPORT
-    cv::imshow("rgb", cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data));
-#else
-    unsigned char **pprgba = reinterpret_cast<unsigned char **>(rgb->data);
-    cv::Mat rgba(1080, 1920, CV_8UC4, pprgba[0]);
-    cv::Mat bgra(1080, 1920, CV_8UC4);
-    cv::cvtColor(rgba, bgra, cv::COLOR_RGBA2BGRA);
-    cv::imshow("rgb", bgra);
-#endif
-*/
-    switch (stream)
-    {
-        case IR:
-	{
-               cv::imshow("Kinect", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
-	}       
-	break;
-        case Depth:
-	{
-               cv::imshow("Kinect", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
-	}         
-	break;
-        case DepthEdge:
-        { 
-	       cv::Mat DEImage = (cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
-    	       cv::Mat ucharDEImage, ucharDEImageScaled;
-               DEImage.convertTo(ucharDEImageScaled,CV_8UC1, 255, 0);
-               cv::Canny(ucharDEImageScaled, ucharDEImageScaled, max_lowThreshold, max_lowThreshold*ratio);
-               cv::imshow("Kinect", ucharDEImageScaled);
-        }
-      	break;
-        case IREdge:
-	{
-               cv::Mat IRImage = (cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
-    	       cv::Mat ucharIRImage, ucharIRImageScaled;
-               IRImage.convertTo(ucharIRImageScaled,CV_8UC1, 255, 0);
-               cv::Canny(ucharIRImageScaled, ucharIRImageScaled, max_lowThreshold, max_lowThreshold*ratio);
-               cv::imshow("Kinect", ucharIRImageScaled);
-	}        
-        break;
-    }
-
+    
+    cv::Mat IRImage = (cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 10000.0f); //originally 200000.0f
+    cv::Mat ucharIRImage, ucharIRImageScaled, ucharIRImageScaledEqualized;
+    IRImage.convertTo(ucharIRImageScaled,CV_8UC1, 255, 0);
+    cv::equalizeHist(ucharIRImageScaled, ucharIRImageScaledEqualized);
+    cv::blur(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, cv::Size(3, 3) ); //What is 3x3?
+    pos = cv::getTrackbarPos("EdgeThresholds", "Kinect");
+    cv::Canny(ucharIRImageScaled, ucharIRImageScaled, pos, pos*ratio);
+    cv::Canny(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, pos, pos*ratio);
+    //cv::cuda::fastNlMeansDenoising(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized); 
+    cv::imshow("Kinect", ucharIRImageScaled);
+    cv::imshow("KinectEqualized", ucharIRImageScaledEqualized);
+//    cv::imshow("IR",cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f); 
     int key = cv::waitKey(1);
-    gpioGetValue(input, &trigger);
-    if ((trigger^value) && (trigger))
-    {
-        //gpioSetValue(redLED, on);
-        //usleep(1000000);         // on for 200ms
-        //gpioSetValue(redLED, off);
-        //usleep(200000);         // off for 200ms
-        switch(stream)
-        {
-            case IR: stream = Depth; break;
-            case Depth: stream = DepthEdge; break;
-            case DepthEdge: stream = IREdge; break;
-            case IREdge: stream = IR; break;
-        
-        }
-    } 
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
-    value = trigger;
     listener.release(frames);
     //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(100));
   }
