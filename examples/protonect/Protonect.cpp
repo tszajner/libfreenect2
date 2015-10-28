@@ -109,6 +109,9 @@ int main(int argc, char *argv[])
     IRImage.convertTo(ucharIRImageScaled,CV_8UC1, 255, 0);
     cv::equalizeHist(ucharIRImageScaled, ucharIRImageScaledEqualized);
     cv::blur(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, cv::Size(3, 3) ); //What is 3x3?
+    cv::dilate(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, cv::Mat() ); //What is 3x3   
+    cv::erode(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, cv::Mat() ); //What is 3x3   
+
     pos = cv::getTrackbarPos("EdgeThresholds", "Kinect");
     cv::Canny(ucharIRImageScaled, ucharIRImageScaled, pos, pos*ratio);
     cv::Canny(ucharIRImageScaledEqualized, ucharIRImageScaledEqualized, pos, pos*ratio);
