@@ -64,14 +64,6 @@ int main(int argc, char *argv[])
   size_t executable_name_idx = program_path.rfind("Protonect");
 
   std::string binpath = "/";
-  State stream = IR; 
-  jetsonGPIO input = gpio166 ;
-  gpioExport(input);
-  gpioOpen(input);
-  gpioSetDirection(input, inputPin);
-  //gpioSetEdge(input, "rising");
-  unsigned int value = 0;
-  unsigned int trigger = 0;
   if(executable_name_idx != std::string::npos)
   {
     binpath = program_path.substr(0, executable_name_idx);
@@ -99,6 +91,7 @@ int main(int argc, char *argv[])
 
   std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
   std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
+  float scale = 63;
 
   while(!protonect_shutdown)
   {
@@ -117,57 +110,45 @@ int main(int argc, char *argv[])
     cv::imshow("rgb", bgra);
 #endif
 */
-    switch (stream)
+    cv::Mat OriginalImage = cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f;
+    cv::flip(OriginalImage, OriginalImage, -1);
+    float height = float(OriginalImage.rows) * (scale / 100.0f);
+    float width= float(OriginalImage.cols) * (scale / 100.0f); 
+    //std::cout << height << std::endl;
+    //std::cout << width  << std::endl; 
+    int a, b, c, d;
+    a =  (OriginalImage.cols - int(width)) / 2;
+    b = OriginalImage.cols - 1 -  (OriginalImage.cols - int(width)) / 2;
+    c = (OriginalImage.rows -  int(height)) / 2;
+    d = OriginalImage.rows - 1 -  (OriginalImage.rows - int(height)) / 2;
+
+    //std::cout << a << "   " << b << "    " << c << "    " << d << std::endl;
+    cv::Mat zoomedImg = OriginalImage(cv::Range(c, d),
+                                      cv::Range(a, b));// d'oh
+    cv::resize(zoomedImg, zoomedImg,OriginalImage.size()); 
+    zoomedImg.convertTo(zoomedImg, CV_8UC1, 255, 0); 
+    cv::equalizeHist(zoomedImg, zoomedImg); 
+    cv::Canny(zoomedImg, zoomedImg, 80, 240);
+    cv::imshow("Kinect", zoomedImg); 
+    int key = cv::waitKey(1);
+    if ((key & 0xFF) == 113)
     {
-        case IR:
-	{
-               cv::imshow("Kinect", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
-	}       
-	break;
-        case Depth:
-	{
-               cv::imshow("Kinect", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
-	}         
-	break;
-        case DepthEdge:
-        { 
-	       cv::Mat DEImage = (cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
-    	       cv::Mat ucharDEImage, ucharDEImageScaled;
-               DEImage.convertTo(ucharDEImageScaled,CV_8UC1, 255, 0);
-               cv::Canny(ucharDEImageScaled, ucharDEImageScaled, max_lowThreshold, max_lowThreshold*ratio);
-               cv::imshow("Kinect", ucharDEImageScaled);
+        if (scale > 1)
+        {
+         scale--;
+         std::cout << scale << std::endl;
         }
-      	break;
-        case IREdge:
-	{
-               cv::Mat IRImage = (cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
-    	       cv::Mat ucharIRImage, ucharIRImageScaled;
-               IRImage.convertTo(ucharIRImageScaled,CV_8UC1, 255, 0);
-               cv::Canny(ucharIRImageScaled, ucharIRImageScaled, max_lowThreshold, max_lowThreshold*ratio);
-               cv::imshow("Kinect", ucharIRImageScaled);
-	}        
-        break;
     }
 
-    int key = cv::waitKey(1);
-    gpioGetValue(input, &trigger);
-    if ((trigger^value) && (trigger))
+    if ((key & 0xFF) == 97)
     {
-        //gpioSetValue(redLED, on);
-        //usleep(1000000);         // on for 200ms
-        //gpioSetValue(redLED, off);
-        //usleep(200000);         // off for 200ms
-        switch(stream)
+        if (scale <=  99)
         {
-            case IR: stream = Depth; break;
-            case Depth: stream = DepthEdge; break;
-            case DepthEdge: stream = IREdge; break;
-            case IREdge: stream = IR; break;
-        
+         scale++;
+         std::cout << scale << std::endl;
         }
-    } 
+    }
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
-    value = trigger;
     listener.release(frames);
     //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(100));
   }
