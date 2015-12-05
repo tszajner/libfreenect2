@@ -167,11 +167,11 @@ int main(int argc, char *argv[])
 	{
 
 		cv::imshow("Kinect", TrueSight.Draw(cv::Mat(
-					(cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f))));    
+					(cv::Mat(depth->height, depth->width, CV_32FC1, depth->data)
+												/ 50.0f))));// play with these values when integration is in progress for proper brightness    
 	}        
         break;
     }
-
 
     int key = cv::waitKey(1);
     if ((key & 0xFF) == 116) // T?

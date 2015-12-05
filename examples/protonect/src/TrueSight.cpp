@@ -18,10 +18,12 @@ void TrueSight::Calibrate(int16_t xpot, int16_t ypot, int16_t zpot)
 	scale = (float(zpot) - float(minZoomADC)) / float(ZoomADCRange); // Make this better
 }
 
-cv::Mat TrueSight::Draw(cv::Mat src)
+cv::Mat TrueSight::Draw(cv::Mat img)
 {
 
-	Display = cv::Mat::zeros(LCD_HEIGHT, LCD_WIDTH, CV_32FC1); // Clear Display
+	Display = cv::Mat::zeros(LCD_HEIGHT, LCD_WIDTH, CV_8UC1); // Clear Display
+
+	cv::Mat src(img);
 
 	//Pro Algorithm ;p
 	float height = float(STREAM_HEIGHT) * (scale); 
