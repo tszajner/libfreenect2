@@ -29,7 +29,7 @@ class TrueSight
 	//Functions
 	TrueSight(int16_t x,int16_t y,int16_t z); //Initialize values
 	void Calibrate(int16_t x,int16_t y,int16_t z); //Read in values from ADC, use for Drawing			
-	cv::Mat Draw(cv::Mat& src);
+	cv::Mat Draw(cv::Mat src);
 
 	private:
 
