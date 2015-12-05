@@ -184,6 +184,7 @@ int main(int argc, char *argv[])
         
         }
     } 
+    TrueSight.Calibrate(ads.readADC_SingleEnded(3), ads.readADC_SingleEnded(3), 1200);
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
    // value = trigger;
     listener.release(frames);
