@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
   std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
 
   //Set Up window  
-  cv::namedWindow("Kinect", CV_WINDOW_NORMAL);
+  cv::namedWindow("Kinect", CV_WINDOW_AUTOSIZE);
   //cv::setWindowProperty("Kinect", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
 
   while(!protonect_shutdown)
@@ -184,11 +184,12 @@ int main(int argc, char *argv[])
         
         }
     } 
-    TrueSight.Calibrate(ads.readADC_SingleEnded(3), ads.readADC_SingleEnded(3), 1200);
+    TrueSight.Calibrate(ads.readADC_SingleEnded(3), ads.readADC_SingleEnded(3), ads.readADC_SingleEnded(3));
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
    // value = trigger;
     listener.release(frames);
     //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(100));
+    std::cout << "If You're Reading This It's Too Late" << std::endl;
   }
 
   // TODO: restarting ir stream doesn't work!

@@ -102,7 +102,7 @@ cv::Mat TrueSight::Draw(cv::Mat src)
 		}
 		break;
 	}
-	
+	cv::flip(Display, Display, -1);	
 	
 	return Display;
 }
