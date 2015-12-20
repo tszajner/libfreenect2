@@ -31,7 +31,7 @@ int i2cHandle;
 /**************************************************************************/
 static void beginTransmission(uint8_t i2cAddress) {
   // Create the file descriptor for the i2c bus
-  i2cHandle = open("/dev/i2c-1", O_RDWR);
+  i2cHandle = open("/dev/i2c-2", O_RDWR);
   if(i2cHandle < 0)
   {
     fprintf(stderr, "Error while opening the i2c-2 device! Error: %s\n", strerror(errno));

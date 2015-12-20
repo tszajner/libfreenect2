@@ -100,6 +100,14 @@ int main(int argc, char *argv[])
   ads.setGain(GAIN_ONE);
   ads.setSps(SPS_250);
 
+  //GPIO
+  jetsonGPIO toggle = gpio161;
+  gpioExport(toggle);
+  gpioOpen(toggle);
+  gpioSetDirection(toggle, inputPin);
+  unsigned int value = 0;
+  unsigned trigger = 0;
+
   //TrueSight
   TrueSight TrueSight(50, 50, 1300);
 
@@ -174,7 +182,8 @@ int main(int argc, char *argv[])
     }
 
     int key = cv::waitKey(1);
-    if ((key & 0xFF) == 116) // T?
+    gpioGetValue(toggle, &trigger);
+    if ((trigger^value) && (trigger)) // T?
     {
         switch(TrueSight.DisplayState)
         {
@@ -184,14 +193,15 @@ int main(int argc, char *argv[])
         
         }
     } 
-    TrueSight.Calibrate(ads.readADC_SingleEnded(3), ads.readADC_SingleEnded(3), ads.readADC_SingleEnded(3));
+    TrueSight.Calibrate(ads.readADC_SingleEnded(1), ads.readADC_SingleEnded(2), ads.readADC_SingleEnded(3));
+    //TrueSight.Calibrate(1300, 1300, 1600);
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
-   // value = trigger;
+    value = trigger;
     listener.release(frames);
     //libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(100));
     std::cout << "If You're Reading This It's Too Late" << std::endl;
   }
-
+  gpioUnexport(toggle);
   // TODO: restarting ir stream doesn't work!
   // TODO: bad things will happen, if frame listeners are freed before dev->stop() :(
   dev->stop();
